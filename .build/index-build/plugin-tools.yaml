@@ -1,0 +1,47 @@
+client:
+  name: basic
+  file-system: device-agnostic
+tools: {}
+targets:
+  "PackageStructure": ["<PackageStructure>"]
+  "Typee-arm64-apple-macosx26.0-debug.module": ["<Typee-arm64-apple-macosx26.0-debug.module>"]
+  "main": ["<Typee-arm64-apple-macosx26.0-debug.module>"]
+  "test": ["<Typee-arm64-apple-macosx26.0-debug.module>"]
+default: "main"
+nodes:
+  "/Users/reyansh/Desktop/typee-claude/Sources/Typee/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+commands:
+  "/Users/reyansh/Desktop/typee-claude/.build/index-build/arm64-apple-macosx/debug/Typee.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/reyansh/Desktop/typee-claude/Sources/Typee/AppDelegate.swift","/Users/reyansh/Desktop/typee-claude/Sources/Typee/HotkeyManager.swift","/Users/reyansh/Desktop/typee-claude/Sources/Typee/NoteStore.swift","/Users/reyansh/Desktop/typee-claude/Sources/Typee/TypeeWindow.swift","/Users/reyansh/Desktop/typee-claude/Sources/Typee/main.swift"]
+    outputs: ["/Users/reyansh/Desktop/typee-claude/.build/index-build/arm64-apple-macosx/debug/Typee.build/sources"]
+    description: "Write auxiliary file /Users/reyansh/Desktop/typee-claude/.build/index-build/arm64-apple-macosx/debug/Typee.build/sources"
+
+  "/Users/reyansh/Desktop/typee-claude/.build/index-build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt":
+    tool: write-auxiliary-file
+    inputs: ["<swift-get-version>","/Library/Developer/CommandLineTools/usr/bin/swiftc"]
+    outputs: ["/Users/reyansh/Desktop/typee-claude/.build/index-build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt"]
+    always-out-of-date: "true"
+    description: "Write auxiliary file /Users/reyansh/Desktop/typee-claude/.build/index-build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt"
+
+  "<Typee-arm64-apple-macosx26.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/reyansh/Desktop/typee-claude/.build/index-build/arm64-apple-macosx/debug/Modules/Typee.swiftmodule"]
+    outputs: ["<Typee-arm64-apple-macosx26.0-debug.module>"]
+
+  "C.Typee-arm64-apple-macosx26.0-debug.module":
+    tool: shell
+    inputs: ["/Users/reyansh/Desktop/typee-claude/Sources/Typee/AppDelegate.swift","/Users/reyansh/Desktop/typee-claude/Sources/Typee/HotkeyManager.swift","/Users/reyansh/Desktop/typee-claude/Sources/Typee/NoteStore.swift","/Users/reyansh/Desktop/typee-claude/Sources/Typee/TypeeWindow.swift","/Users/reyansh/Desktop/typee-claude/Sources/Typee/main.swift","/Users/reyansh/Desktop/typee-claude/.build/index-build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt","/Users/reyansh/Desktop/typee-claude/.build/index-build/arm64-apple-macosx/debug/Typee.build/sources"]
+    outputs: ["/Users/reyansh/Desktop/typee-claude/.build/index-build/arm64-apple-macosx/debug/Modules/Typee.swiftmodule"]
+    description: "Compiling Swift Module 'Typee' (5 sources)"
+    args: ["/Library/Developer/CommandLineTools/usr/bin/swiftc","-module-name","Typee","-emit-dependencies","-emit-module","-emit-module-path","/Users/reyansh/Desktop/typee-claude/.build/index-build/arm64-apple-macosx/debug/Modules/Typee.swiftmodule","-output-file-map","/Users/reyansh/Desktop/typee-claude/.build/index-build/arm64-apple-macosx/debug/Typee.build/output-file-map.json","-incremental","@/Users/reyansh/Desktop/typee-claude/.build/index-build/arm64-apple-macosx/debug/Typee.build/sources","-I","/Users/reyansh/Desktop/typee-claude/.build/index-build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx13.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-Onone","-enable-testing","-j8","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/reyansh/Desktop/typee-claude/.build/index-build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-Xfrontend","-entry-point-function-name","-Xfrontend","Typee_main","-swift-version","5","-Xfrontend","-experimental-lazy-typecheck","-Xfrontend","-experimental-skip-all-function-bodies","-Xfrontend","-experimental-allow-module-with-compiler-errors","-Xfrontend","-empty-abi-descriptor","-I","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-L","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-plugin-path","/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing","-sdk","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-g","-Xcc","-isysroot","-Xcc","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-Xcc","-fPIC","-Xcc","-g","-package-name","typee_claude"]
+
+  "PackageStructure":
+    tool: package-structure-tool
+    inputs: ["/Users/reyansh/Desktop/typee-claude/Sources/Typee/","/Users/reyansh/Desktop/typee-claude/Package.swift","/Users/reyansh/Desktop/typee-claude/Package.resolved"]
+    outputs: ["<PackageStructure>"]
+    description: "Planning build"
+    allow-missing-inputs: true
+

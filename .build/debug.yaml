@@ -1,0 +1,81 @@
+client:
+  name: basic
+  file-system: device-agnostic
+tools: {}
+targets:
+  "PackageStructure": ["<PackageStructure>"]
+  "Typee-arm64-apple-macosx26.0-debug.exe": ["<Typee-arm64-apple-macosx26.0-debug.exe>"]
+  "Typee-arm64-apple-macosx26.0-debug.module": ["<Typee-arm64-apple-macosx26.0-debug.module>"]
+  "main": ["<Typee-arm64-apple-macosx26.0-debug.exe>","<Typee-arm64-apple-macosx26.0-debug.module>"]
+  "test": ["<Typee-arm64-apple-macosx26.0-debug.exe>","<Typee-arm64-apple-macosx26.0-debug.module>"]
+default: "main"
+nodes:
+  "/Users/reyansh/Desktop/typee-claude/Sources/Typee/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+  "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee":
+    is-mutated: true
+commands:
+  "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee-entitlement.plist":
+    tool: write-auxiliary-file
+    inputs: ["<entitlement-plist>","<com.apple.security.get-task-allow>"]
+    outputs: ["/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee-entitlement.plist"]
+    description: "Write auxiliary file /Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee-entitlement.plist"
+
+  "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/reyansh/Desktop/typee-claude/Sources/Typee/AppDelegate.swift","/Users/reyansh/Desktop/typee-claude/Sources/Typee/HotkeyManager.swift","/Users/reyansh/Desktop/typee-claude/Sources/Typee/NoteCarouselView.swift","/Users/reyansh/Desktop/typee-claude/Sources/Typee/NoteStore.swift","/Users/reyansh/Desktop/typee-claude/Sources/Typee/TypeeWindow.swift","/Users/reyansh/Desktop/typee-claude/Sources/Typee/main.swift"]
+    outputs: ["/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/sources"]
+    description: "Write auxiliary file /Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/sources"
+
+  "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.product/Objects.LinkFileList":
+    tool: write-auxiliary-file
+    inputs: ["<link-file-list>","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/AppDelegate.swift.o","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/HotkeyManager.swift.o","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/NoteCarouselView.swift.o","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/NoteStore.swift.o","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/TypeeWindow.swift.o","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/main.swift.o"]
+    outputs: ["/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.product/Objects.LinkFileList"]
+    description: "Write auxiliary file /Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.product/Objects.LinkFileList"
+
+  "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt":
+    tool: write-auxiliary-file
+    inputs: ["<swift-get-version>","/Library/Developer/CommandLineTools/usr/bin/swiftc"]
+    outputs: ["/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt"]
+    always-out-of-date: "true"
+    description: "Write auxiliary file /Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt"
+
+  "<Typee-arm64-apple-macosx26.0-debug.exe>":
+    tool: phony
+    inputs: ["<Typee-arm64-apple-macosx26.0-debug.exe-CodeSigning>"]
+    outputs: ["<Typee-arm64-apple-macosx26.0-debug.exe>"]
+
+  "<Typee-arm64-apple-macosx26.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/AppDelegate.swift.o","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/HotkeyManager.swift.o","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/NoteCarouselView.swift.o","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/NoteStore.swift.o","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/TypeeWindow.swift.o","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/main.swift.o","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Modules/Typee.swiftmodule"]
+    outputs: ["<Typee-arm64-apple-macosx26.0-debug.module>"]
+
+  "C.Typee-arm64-apple-macosx26.0-debug.exe":
+    tool: shell
+    inputs: ["/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/AppDelegate.swift.o","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/HotkeyManager.swift.o","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/NoteCarouselView.swift.o","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/NoteStore.swift.o","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/TypeeWindow.swift.o","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/main.swift.o","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.product/Objects.LinkFileList"]
+    outputs: ["/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee"]
+    description: "Linking ./.build/arm64-apple-macosx/debug/Typee"
+    args: ["/Library/Developer/CommandLineTools/usr/bin/swiftc","-L","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug","-o","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee","-module-name","Typee","-Xlinker","-no_warn_duplicate_libraries","-emit-executable","-Xlinker","-alias","-Xlinker","_Typee_main","-Xlinker","_main","-Xlinker","-rpath","-Xlinker","@loader_path","@/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.product/Objects.LinkFileList","-Xlinker","-rpath","-Xlinker","/Library/Developer/CommandLineTools/usr/lib/swift-6.2/macosx","-target","arm64-apple-macosx13.0","-Xlinker","-add_ast_path","-Xlinker","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Modules/Typee.swiftmodule","-I","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-L","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-plugin-path","/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing","-sdk","/Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk","-g"]
+
+  "C.Typee-arm64-apple-macosx26.0-debug.exe-entitlements":
+    tool: shell
+    inputs: ["/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee-entitlement.plist"]
+    outputs: ["<Typee-arm64-apple-macosx26.0-debug.exe-CodeSigning>"]
+    description: "Applying debug entitlements to ./.build/arm64-apple-macosx/debug/Typee"
+    args: ["codesign","--force","--sign","-","--entitlements","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee-entitlement.plist","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee"]
+
+  "C.Typee-arm64-apple-macosx26.0-debug.module":
+    tool: shell
+    inputs: ["/Users/reyansh/Desktop/typee-claude/Sources/Typee/AppDelegate.swift","/Users/reyansh/Desktop/typee-claude/Sources/Typee/HotkeyManager.swift","/Users/reyansh/Desktop/typee-claude/Sources/Typee/NoteCarouselView.swift","/Users/reyansh/Desktop/typee-claude/Sources/Typee/NoteStore.swift","/Users/reyansh/Desktop/typee-claude/Sources/Typee/TypeeWindow.swift","/Users/reyansh/Desktop/typee-claude/Sources/Typee/main.swift","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/sources"]
+    outputs: ["/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/AppDelegate.swift.o","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/HotkeyManager.swift.o","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/NoteCarouselView.swift.o","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/NoteStore.swift.o","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/TypeeWindow.swift.o","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/main.swift.o","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Modules/Typee.swiftmodule"]
+    description: "Compiling Swift Module 'Typee' (6 sources)"
+    args: ["/Library/Developer/CommandLineTools/usr/bin/swiftc","-module-name","Typee","-emit-dependencies","-emit-module","-emit-module-path","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Modules/Typee.swiftmodule","-output-file-map","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/output-file-map.json","-incremental","-c","@/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/sources","-I","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx13.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-j8","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-Xfrontend","-entry-point-function-name","-Xfrontend","Typee_main","-color-diagnostics","-swift-version","5","-I","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-L","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-plugin-path","/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing","-sdk","/Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk","-g","-Xcc","-isysroot","-Xcc","/Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk","-Xcc","-fPIC","-Xcc","-g","-package-name","typee_claude"]
+
+  "PackageStructure":
+    tool: package-structure-tool
+    inputs: ["/Users/reyansh/Desktop/typee-claude/Sources/Typee/","/Users/reyansh/Desktop/typee-claude/Package.swift","/Users/reyansh/Desktop/typee-claude/Package.resolved"]
+    outputs: ["<PackageStructure>"]
+    description: "Planning build"
+    allow-missing-inputs: true
+

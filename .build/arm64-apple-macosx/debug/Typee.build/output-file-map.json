@@ -1,0 +1,47 @@
+{
+  "": {
+    "swift-dependencies": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/master.swiftdeps"
+  },
+  "/Users/reyansh/Desktop/typee-claude/Sources/Typee/AppDelegate.swift": {
+    "dependencies": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/AppDelegate.d",
+    "object": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/AppDelegate.swift.o",
+    "swiftmodule": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/AppDelegate~partial.swiftmodule",
+    "swift-dependencies": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/AppDelegate.swiftdeps",
+    "diagnostics": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/AppDelegate.dia"
+  },
+  "/Users/reyansh/Desktop/typee-claude/Sources/Typee/HotkeyManager.swift": {
+    "dependencies": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/HotkeyManager.d",
+    "object": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/HotkeyManager.swift.o",
+    "swiftmodule": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/HotkeyManager~partial.swiftmodule",
+    "swift-dependencies": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/HotkeyManager.swiftdeps",
+    "diagnostics": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/HotkeyManager.dia"
+  },
+  "/Users/reyansh/Desktop/typee-claude/Sources/Typee/NoteCarouselView.swift": {
+    "dependencies": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/NoteCarouselView.d",
+    "object": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/NoteCarouselView.swift.o",
+    "swiftmodule": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/NoteCarouselView~partial.swiftmodule",
+    "swift-dependencies": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/NoteCarouselView.swiftdeps",
+    "diagnostics": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/NoteCarouselView.dia"
+  },
+  "/Users/reyansh/Desktop/typee-claude/Sources/Typee/NoteStore.swift": {
+    "dependencies": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/NoteStore.d",
+    "object": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/NoteStore.swift.o",
+    "swiftmodule": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/NoteStore~partial.swiftmodule",
+    "swift-dependencies": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/NoteStore.swiftdeps",
+    "diagnostics": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/NoteStore.dia"
+  },
+  "/Users/reyansh/Desktop/typee-claude/Sources/Typee/TypeeWindow.swift": {
+    "dependencies": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/TypeeWindow.d",
+    "object": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/TypeeWindow.swift.o",
+    "swiftmodule": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/TypeeWindow~partial.swiftmodule",
+    "swift-dependencies": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/TypeeWindow.swiftdeps",
+    "diagnostics": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/TypeeWindow.dia"
+  },
+  "/Users/reyansh/Desktop/typee-claude/Sources/Typee/main.swift": {
+    "dependencies": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/main.d",
+    "object": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/main.swift.o",
+    "swiftmodule": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/main~partial.swiftmodule",
+    "swift-dependencies": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/main.swiftdeps",
+    "diagnostics": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/main.dia"
+  }
+}
