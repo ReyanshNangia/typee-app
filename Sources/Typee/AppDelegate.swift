@@ -8,11 +8,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var originApp: NSRunningApplication?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        noteStore = NoteStore()
-        typeeWindow = TypeeWindow(noteStore: noteStore)
-        typeeWindow.onWillHide = { [weak self] in
-            self?.originApp = nil
-        }
+        noteStore    = NoteStore()
+        typeeWindow  = TypeeWindow(noteStore: noteStore)
+        typeeWindow.onWillHide = { [weak self] in self?.originApp = nil }
 
         setupStatusItem()
         setupHotkey()
@@ -27,7 +25,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             button.image = NSImage(systemSymbolName: "pencil", accessibilityDescription: "Typee")
             button.image?.isTemplate = true
         }
-
         let menu = NSMenu()
         menu.addItem(withTitle: "Quit Typee",
                      action: #selector(NSApplication.terminate(_:)),
@@ -42,7 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotkeyManager.onDoubleTap = { [weak self] in self?.toggleTypee() }
     }
 
-    // MARK: - Origin app tracking
+    // MARK: - Origin-app tracking
 
     private func setupWorkspaceObserver() {
         NSWorkspace.shared.notificationCenter.addObserver(
@@ -57,17 +54,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard typeeWindow.isVisible else { return }
         guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
                 as? NSRunningApplication else { return }
+        // Ignore our own app activating
         guard app.bundleIdentifier != Bundle.main.bundleIdentifier else { return }
 
-        // First non-Typee activation → becomes origin
+        let isFinder = app.bundleIdentifier == "com.apple.finder"
+
+        // First non-Typee app after showing: set as origin (never hide on first switch)
+        // Finder is allowed but never becomes the origin — the origin is the first real work app.
         if originApp == nil {
-            originApp = app
+            if !isFinder { originApp = app }
             return
         }
 
-        let isOrigin  = app.bundleIdentifier == originApp?.bundleIdentifier
-        let isFinder  = app.bundleIdentifier == "com.apple.finder"
-
+        let isOrigin = app.bundleIdentifier == originApp?.bundleIdentifier
         if !isOrigin && !isFinder {
             typeeWindow.hide()
             originApp = nil

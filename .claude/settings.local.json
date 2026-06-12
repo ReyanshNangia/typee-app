@@ -28,7 +28,10 @@
       "Bash(mkdir -p /tmp/swift-inc-fix)",
       "Bash(cp /Library/Developer/CommandLineTools/usr/include/swift/bridging.modulemap /tmp/swift-inc-fix/)",
       "Read(//tmp/**)",
-      "Bash(SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk swift build -Xcc -I/tmp/swift-inc-fix)"
+      "Bash(SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk swift build -Xcc -I/tmp/swift-inc-fix)",
+      "Bash(/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee)",
+      "Bash(awk '{print \"Running PID:\", $2}')",
+      "Bash(kill %1)"
     ]
   }
 }

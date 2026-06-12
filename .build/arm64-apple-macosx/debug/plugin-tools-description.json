@@ -40,6 +40,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/reyansh/Desktop/typee-claude/Sources/Typee/PageIndicatorView.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/reyansh/Desktop/typee-claude/Sources/Typee/TypeeWindow.swift"
         },
         {
@@ -63,6 +67,7 @@
         "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/HotkeyManager.swift.o",
         "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/NoteCarouselView.swift.o",
         "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/NoteStore.swift.o",
+        "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/PageIndicatorView.swift.o",
         "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/TypeeWindow.swift.o",
         "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/main.swift.o"
       ],
@@ -130,6 +135,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/PageIndicatorView.swift.o"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/TypeeWindow.swift.o"
         },
         {
@@ -147,6 +156,7 @@
         "/Users/reyansh/Desktop/typee-claude/Sources/Typee/HotkeyManager.swift",
         "/Users/reyansh/Desktop/typee-claude/Sources/Typee/NoteCarouselView.swift",
         "/Users/reyansh/Desktop/typee-claude/Sources/Typee/NoteStore.swift",
+        "/Users/reyansh/Desktop/typee-claude/Sources/Typee/PageIndicatorView.swift",
         "/Users/reyansh/Desktop/typee-claude/Sources/Typee/TypeeWindow.swift",
         "/Users/reyansh/Desktop/typee-claude/Sources/Typee/main.swift"
       ],
@@ -169,6 +179,7 @@
       "/Users/reyansh/Desktop/typee-claude/Sources/Typee/HotkeyManager.swift",
       "/Users/reyansh/Desktop/typee-claude/Sources/Typee/NoteCarouselView.swift",
       "/Users/reyansh/Desktop/typee-claude/Sources/Typee/NoteStore.swift",
+      "/Users/reyansh/Desktop/typee-claude/Sources/Typee/PageIndicatorView.swift",
       "/Users/reyansh/Desktop/typee-claude/Sources/Typee/TypeeWindow.swift",
       "/Users/reyansh/Desktop/typee-claude/Sources/Typee/main.swift",
       "-I",
@@ -275,6 +286,10 @@
         },
         {
           "kind" : "file",
+          "name" : "/Users/reyansh/Desktop/typee-claude/Sources/Typee/PageIndicatorView.swift"
+        },
+        {
+          "kind" : "file",
           "name" : "/Users/reyansh/Desktop/typee-claude/Sources/Typee/TypeeWindow.swift"
         },
         {
@@ -306,6 +321,10 @@
         {
           "kind" : "file",
           "name" : "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/NoteStore.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/PageIndicatorView.swift.o"
         },
         {
           "kind" : "file",

@@ -2,7 +2,8 @@ import Foundation
 
 struct Note: Codable {
     var id: UUID
-    var content: String
+    var content: String  // plain-text fallback / search text
+    var rtfData: Data?   // rich text (bold, italic, underline)
 
     init(content: String = "") {
         id = UUID()
@@ -30,9 +31,10 @@ final class NoteStore {
         activeIndex = max(0, min(saved, notes.count - 1))
     }
 
-    func updateContent(_ content: String, at index: Int) {
+    func updateNote(at index: Int, content: String, rtfData: Data?) {
         guard (0..<notes.count).contains(index) else { return }
         notes[index].content = content
+        notes[index].rtfData = rtfData
         scheduleSave()
     }
 

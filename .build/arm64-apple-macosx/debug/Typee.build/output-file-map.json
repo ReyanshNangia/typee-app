@@ -30,6 +30,13 @@
     "swift-dependencies": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/NoteStore.swiftdeps",
     "diagnostics": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/NoteStore.dia"
   },
+  "/Users/reyansh/Desktop/typee-claude/Sources/Typee/PageIndicatorView.swift": {
+    "dependencies": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/PageIndicatorView.d",
+    "object": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/PageIndicatorView.swift.o",
+    "swiftmodule": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/PageIndicatorView~partial.swiftmodule",
+    "swift-dependencies": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/PageIndicatorView.swiftdeps",
+    "diagnostics": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/PageIndicatorView.dia"
+  },
   "/Users/reyansh/Desktop/typee-claude/Sources/Typee/TypeeWindow.swift": {
     "dependencies": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/TypeeWindow.d",
     "object": "/Users/reyansh/Desktop/typee-claude/.build/arm64-apple-macosx/debug/Typee.build/TypeeWindow.swift.o",
