@@ -52,6 +52,32 @@ final class NoteStore {
         UserDefaults.standard.set(index, forKey: indexKey)
     }
 
+    func deleteNote(at index: Int) {
+        guard notes.count > 1 else { return }
+        guard (0..<notes.count).contains(index) else { return }
+        notes.remove(at: index)
+        if activeIndex >= index {
+            activeIndex = max(0, activeIndex - 1)
+        }
+        scheduleSave()
+    }
+
+    func moveNote(from fromIndex: Int, to toIndex: Int) {
+        guard fromIndex != toIndex else { return }
+        guard (0..<notes.count).contains(fromIndex),
+              (0..<notes.count).contains(toIndex) else { return }
+        let note = notes.remove(at: fromIndex)
+        notes.insert(note, at: toIndex)
+        if activeIndex == fromIndex {
+            activeIndex = toIndex
+        } else if fromIndex < toIndex {
+            if activeIndex > fromIndex && activeIndex <= toIndex { activeIndex -= 1 }
+        } else {
+            if activeIndex < fromIndex && activeIndex >= toIndex { activeIndex += 1 }
+        }
+        scheduleSave()
+    }
+
     private func scheduleSave() {
         saveTimer?.invalidate()
         saveTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: false) { [weak self] _ in

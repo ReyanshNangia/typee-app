@@ -9,6 +9,7 @@ final class HotkeyManager {
     private var lastControlPressTime: Date?
     private var isControlDown = false
     private let doubleTapInterval: TimeInterval = 0.35
+    private let minTapInterval:    TimeInterval = 0.05  // filter keyboard bounce
 
     init() {
         requestAccessibilityIfNeeded()
@@ -17,7 +18,7 @@ final class HotkeyManager {
 
     deinit {
         if let m = globalMonitor { NSEvent.removeMonitor(m) }
-        if let m = localMonitor { NSEvent.removeMonitor(m) }
+        if let m = localMonitor  { NSEvent.removeMonitor(m) }
     }
 
     private func requestAccessibilityIfNeeded() {
@@ -36,14 +37,28 @@ final class HotkeyManager {
     }
 
     private func handleFlagsChanged(_ event: NSEvent) {
+        // Only react to actual Control key events.
+        // keyCode 59 = Left Control, 62 = Right Control.
+        // Without this check every modifier change (Shift, Option, Fn…) that
+        // happens to leave .control set is misread as a Ctrl press.
+        guard event.keyCode == 59 || event.keyCode == 62 else { return }
+
         let controlNowDown = event.modifierFlags.contains(.control)
 
         if controlNowDown && !isControlDown {
             let now = Date()
-            if let last = lastControlPressTime, now.timeIntervalSince(last) < doubleTapInterval {
-                lastControlPressTime = nil
-                DispatchQueue.main.async { [weak self] in
-                    self?.onDoubleTap?()
+            if let last = lastControlPressTime {
+                let elapsed = now.timeIntervalSince(last)
+                // elapsed > minTapInterval: skip keyboard bounce
+                // elapsed < doubleTapInterval: within the double-tap window
+                if elapsed > minTapInterval && elapsed < doubleTapInterval {
+                    lastControlPressTime = nil
+                    DispatchQueue.main.async { [weak self] in
+                        self?.onDoubleTap?()
+                    }
+                } else {
+                    // Too fast (bounce) or too slow — start a fresh first-tap
+                    lastControlPressTime = now
                 }
             } else {
                 lastControlPressTime = now

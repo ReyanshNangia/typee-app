@@ -11,6 +11,17 @@ final class TypeeWindow: NSPanel {
 
     private let sizeKey = "typee.windowSize"
 
+    // NSPanel: explicitly allow key window so keyboard events reach the text view
+    override var canBecomeKey: Bool  { true }
+    override var canBecomeMain: Bool { false }
+
+    // Called by the system the instant this window IS the key window —
+    // safe to grab first responder here (avoids the NSApp.activate race in show()).
+    override func becomeKey() {
+        super.becomeKey()
+        DispatchQueue.main.async { [weak self] in self?.carousel.focusCurrent() }
+    }
+
     // MARK: - Init
 
     init(noteStore: NoteStore) {
@@ -39,6 +50,7 @@ final class TypeeWindow: NSPanel {
         titlebarAppearsTransparent = true
         isMovableByWindowBackground = true
         level                      = .floating
+        hidesOnDeactivate          = false   // NSPanel default is true — kills always-on-top
         collectionBehavior         = [.canJoinAllSpaces, .fullScreenAuxiliary]
         minSize                    = NSSize(width: 300, height: 200)
         isOpaque                   = false
@@ -76,6 +88,16 @@ final class TypeeWindow: NSPanel {
         indicator.translatesAutoresizingMaskIntoConstraints = false
         indicator.reload(count: noteStore.notes.count,
                          current: noteStore.activeIndex)
+        indicator.onPageSelected = { [weak self] idx in
+            self?.carousel.navigateTo(idx)
+        }
+        indicator.onReorder = { [weak self] from, to in
+            guard let self else { return }
+            self.noteStore.moveNote(from: from, to: to)
+            self.carousel.reorderPage(from: from, to: to)
+            self.indicator.reload(count: self.noteStore.notes.count,
+                                  current: self.carousel.currentPage)
+        }
 
         blur.addSubview(carousel)
         blur.addSubview(indicator)
@@ -104,6 +126,15 @@ final class TypeeWindow: NSPanel {
                          current: noteStore.activeIndex)
     }
 
+    private func handleDeleteNote() {
+        guard noteStore.notes.count > 1 else { return }
+        noteStore.deleteNote(at: noteStore.activeIndex)
+        carousel.deleteCurrentPage()
+        noteStore.setActiveIndex(carousel.currentPage)
+        indicator.reload(count: noteStore.notes.count,
+                         current: carousel.currentPage)
+    }
+
     // MARK: - Size persistence
 
     override func setContentSize(_ aSize: NSSize) {
@@ -127,12 +158,18 @@ final class TypeeWindow: NSPanel {
             guard let self else { return event }
             // Escape
             if event.keyCode == 53 { self.hide(); return nil }
-            // Cmd-N
-            if event.modifierFlags.contains(.command),
-               event.charactersIgnoringModifiers == "n" {
-                self.handleCreateNote(); return nil
+            guard event.modifierFlags.contains(.command) else { return event }
+            let isShift = event.modifierFlags.contains(.shift)
+            switch event.charactersIgnoringModifiers?.lowercased() {
+            case "w": self.hide(); return nil
+            case "n":
+                if isShift { self.handleDeleteNote() }
+                else       { self.handleCreateNote() }
+                return nil
+            case "b": self.carousel.toggleBold();      return nil
+            case "u": self.carousel.toggleUnderline(); return nil
+            default:  return event
             }
-            return event
         }
 
         scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
@@ -154,8 +191,6 @@ final class TypeeWindow: NSPanel {
         installMonitors()
         makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        // Defer focus so the window is fully on screen first
-        DispatchQueue.main.async { [weak self] in self?.carousel.focusCurrent() }
         NSAnimationContext.runAnimationGroup { ctx in
             ctx.duration = 0.15
             self.animator().alphaValue = 1

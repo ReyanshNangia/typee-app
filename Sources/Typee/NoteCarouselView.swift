@@ -10,6 +10,7 @@ final class NoteCarouselView: NSView {
 
     private var container: NSView!
     private var ghostView: NSView!
+    private var ghostLabel: NSTextField!
     private(set) var currentPage: Int = 0
     private var displayOffset: CGFloat = 0
 
@@ -17,10 +18,17 @@ final class NoteCarouselView: NSView {
 
     private enum Axis { case none, horizontal, vertical }
     private var gestureAxis  = Axis.none
-    private var dragStart    = CGFloat(0)  // displayOffset at gesture begin
-    private var dragPage     = 0           // currentPage at gesture begin
+    private var dragStart    = CGFloat(0)
+    private var dragPage     = 0
     private var recentDeltas = [(t: CFTimeInterval, dx: CGFloat)]()
-    private var elasticOver  = CGFloat(0)  // right-edge overscroll amount
+
+    // Raw overscroll: actual cumulative finger movement past the right edge.
+    // Tracked independently from displayOffset (which is rubber-banded) so the
+    // threshold is reachable — the rubber-banded ceiling is ~c, but rawOverscroll
+    // can grow without bound.
+    private var rawOverscroll: CGFloat = 0
+    private var isOverThreshold = false
+    private var pendingVelocity: CGFloat = 0
 
     // MARK: - Spring animation
 
@@ -53,7 +61,6 @@ final class NoteCarouselView: NSView {
 
     // MARK: - Page management
 
-    /// Called when a new note has been added to the store.
     func appendNewPage(animated: Bool) {
         let note = noteStore.notes.last!
         addPage(note: note)
@@ -71,9 +78,137 @@ final class NoteCarouselView: NSView {
         updateGhostFrame()
 
         if animated {
-            // Spring with a little bounce so it feels like a new note popped in
-            springJump(to: newIdx, stiffness: 320, damping: 20)
+            let v = pendingVelocity
+            pendingVelocity = 0
+            springJump(to: newIdx, stiffness: 320, damping: 22, velocity: v)
+            showToast("New Note")
         }
+    }
+
+    // Shared toast for create / delete — positioned just above the indicator strip.
+    // Uses pure CATransaction throughout (no NSAnimationContext mixing) so the
+    // first frame is always correct and there's no implicit-animation jank.
+    private func showToast(_ text: String) {
+        // Dismiss any in-progress toast immediately
+        subviews
+            .filter { $0.identifier == NSUserInterfaceItemIdentifier("toast") }
+            .forEach { $0.removeFromSuperview() }
+
+        let pill = NSView()
+        pill.identifier  = NSUserInterfaceItemIdentifier("toast")
+        pill.wantsLayer  = true
+        pill.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.07).cgColor
+        pill.layer?.cornerRadius    = 11
+        pill.translatesAutoresizingMaskIntoConstraints = false
+
+        let label = NSTextField(labelWithString: text)
+        label.font      = .systemFont(ofSize: 11, weight: .medium)
+        label.textColor = .tertiaryLabelColor
+        label.translatesAutoresizingMaskIntoConstraints = false
+        pill.addSubview(label)
+
+        addSubview(pill)
+        NSLayoutConstraint.activate([
+            label.topAnchor.constraint(equalTo: pill.topAnchor,      constant:  5),
+            label.bottomAnchor.constraint(equalTo: pill.bottomAnchor, constant: -5),
+            label.leadingAnchor.constraint(equalTo: pill.leadingAnchor,  constant:  11),
+            label.trailingAnchor.constraint(equalTo: pill.trailingAnchor, constant: -11),
+            pill.centerXAnchor.constraint(equalTo: centerXAnchor),
+            // Float just above the indicator strip
+            pill.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -10),
+        ])
+
+        // Set initial state with actions disabled so no implicit animation fires
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        pill.layer?.opacity   = 0
+        pill.layer?.transform = CATransform3DMakeScale(0.90, 0.90, 1)
+        CATransaction.commit()
+
+        // Grow + fade in
+        CATransaction.begin()
+        CATransaction.setAnimationDuration(0.20)
+        CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .easeOut))
+        pill.layer?.opacity   = 1
+        pill.layer?.transform = CATransform3DIdentity
+        CATransaction.commit()
+
+        // Fade out after hold
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) {
+            guard pill.superview != nil else { return }
+            CATransaction.begin()
+            CATransaction.setAnimationDuration(0.25)
+            CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .easeIn))
+            CATransaction.setCompletionBlock { pill.removeFromSuperview() }
+            pill.layer?.opacity   = 0
+            pill.layer?.transform = CATransform3DMakeScale(0.90, 0.90, 1)
+            CATransaction.commit()
+        }
+    }
+
+    func deleteCurrentPage() {
+        guard scrollViews.count > 1 else { return }
+        stopAnim()
+
+        let idx = currentPage
+        let dying = scrollViews[idx]
+        let w = bounds.width, h = bounds.height
+
+        // Navigate to adjacent note (prefer previous; fall back to new index 0)
+        let newPage = idx > 0 ? idx - 1 : 0
+        currentPage = newPage
+
+        scrollViews.remove(at: idx)
+        textViews.remove(at: idx)
+
+        // Relayout remaining pages at their new indices
+        container.frame.size.width = w * CGFloat(scrollViews.count)
+        for (i, sv) in scrollViews.enumerated() {
+            sv.frame = NSRect(x: CGFloat(i) * w, y: 0, width: w, height: h)
+        }
+        updateGhostFrame()
+
+        // Fade the deleted note out while it's still in the container
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.20
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            dying.animator().alphaValue = 0
+        } completionHandler: {
+            dying.removeFromSuperview()
+        }
+
+        // Spring from where we are to the new target page, then focus immediately
+        startSpring(to: CGFloat(newPage) * w, stiffness: 380, damping: 28)
+        focusCurrent()
+        showToast("Note Deleted")
+    }
+
+    func reorderPage(from fromIndex: Int, to toIndex: Int) {
+        guard fromIndex != toIndex else { return }
+        let sv = scrollViews.remove(at: fromIndex)
+        let tv = textViews.remove(at: fromIndex)
+        scrollViews.insert(sv, at: toIndex)
+        textViews.insert(tv, at: toIndex)
+
+        if currentPage == fromIndex {
+            currentPage = toIndex
+        } else if fromIndex < toIndex {
+            if currentPage > fromIndex && currentPage <= toIndex { currentPage -= 1 }
+        } else {
+            if currentPage < fromIndex && currentPage >= toIndex { currentPage += 1 }
+        }
+
+        let w = bounds.width, h = bounds.height
+        for (i, sv) in scrollViews.enumerated() {
+            sv.frame = NSRect(x: CGFloat(i) * w, y: 0, width: w, height: h)
+        }
+        displayOffset = CGFloat(currentPage) * w
+        setOffset(displayOffset)
+    }
+
+    func navigateTo(_ page: Int) {
+        guard page >= 0, page < scrollViews.count, page != currentPage else { return }
+        springJump(to: page, stiffness: 420, damping: 30, velocity: 0)
     }
 
     private func addPage(note: Note) {
@@ -101,7 +236,7 @@ final class NoteCarouselView: NSView {
 
     private func makeTextView() -> NSTextView {
         let tv = NSTextView()
-        tv.isRichText           = true   // enables Cmd+B/I/U and text selection
+        tv.isRichText           = true
         tv.allowsUndo           = true
         tv.usesFontPanel        = false
         tv.isVerticallyResizable   = true
@@ -143,13 +278,77 @@ final class NoteCarouselView: NSView {
             label.centerXAnchor.constraint(equalTo: v.centerXAnchor),
             label.centerYAnchor.constraint(equalTo: v.centerYAnchor),
         ])
+        ghostLabel = label
         return v
     }
 
+    var currentTextView: NSTextView? {
+        guard currentPage < textViews.count else { return nil }
+        return textViews[currentPage]
+    }
+
     func focusCurrent() {
-        guard currentPage < textViews.count else { return }
-        guard let win = window, win.isVisible else { return }
-        win.makeFirstResponder(textViews[currentPage])
+        guard let tv = currentTextView, let win = window, win.isVisible else { return }
+        win.makeFirstResponder(tv)
+    }
+
+    // MARK: - Formatting
+
+    func toggleBold() {
+        guard let tv = currentTextView else { return }
+        toggleTrait(.boldFontMask, in: tv)
+    }
+
+    func toggleUnderline() {
+        guard let tv = currentTextView, let storage = tv.textStorage else { return }
+        let range = tv.selectedRange()
+        if range.length == 0 {
+            var attrs = tv.typingAttributes
+            let current = attrs[.underlineStyle] as? Int ?? 0
+            attrs[.underlineStyle] = current == 0 ? NSUnderlineStyle.single.rawValue : 0
+            tv.typingAttributes = attrs
+            return
+        }
+        var allUnderlined = true
+        storage.enumerateAttribute(.underlineStyle, in: range, options: []) { val, _, stop in
+            if (val as? Int ?? 0) == 0 { allUnderlined = false; stop.pointee = true }
+        }
+        tv.shouldChangeText(in: range, replacementString: nil)
+        storage.beginEditing()
+        let style = allUnderlined ? 0 : NSUnderlineStyle.single.rawValue
+        storage.addAttribute(.underlineStyle, value: style, range: range)
+        storage.endEditing()
+        tv.didChangeText()
+    }
+
+    private func toggleTrait(_ trait: NSFontTraitMask, in tv: NSTextView) {
+        let range = tv.selectedRange()
+        let mgr   = NSFontManager.shared
+        if range.length == 0 {
+            var attrs = tv.typingAttributes
+            let font  = attrs[.font] as? NSFont ?? NSFont.systemFont(ofSize: 15)
+            attrs[.font] = mgr.traits(of: font).contains(trait)
+                ? mgr.convert(font, toNotHaveTrait: trait)
+                : mgr.convert(font, toHaveTrait: trait)
+            tv.typingAttributes = attrs
+            return
+        }
+        guard let storage = tv.textStorage else { return }
+        var allHas = true
+        storage.enumerateAttribute(.font, in: range, options: []) { val, _, stop in
+            let f = val as? NSFont ?? NSFont.systemFont(ofSize: 15)
+            if !mgr.traits(of: f).contains(trait) { allHas = false; stop.pointee = true }
+        }
+        tv.shouldChangeText(in: range, replacementString: nil)
+        storage.beginEditing()
+        storage.enumerateAttribute(.font, in: range, options: []) { val, sub, _ in
+            let f    = val as? NSFont ?? NSFont.systemFont(ofSize: 15)
+            let newF = allHas ? mgr.convert(f, toNotHaveTrait: trait)
+                              : mgr.convert(f, toHaveTrait: trait)
+            storage.addAttribute(.font, value: newF, range: sub)
+        }
+        storage.endEditing()
+        tv.didChangeText()
     }
 
     // MARK: - Layout
@@ -159,7 +358,6 @@ final class NoteCarouselView: NSView {
         let w = bounds.width, h = bounds.height
         guard w > 0, h > 0 else { return }
 
-        // On window resize: snap to current page unless animating
         if animTimer == nil {
             displayOffset = CGFloat(currentPage) * w
         }
@@ -195,25 +393,23 @@ final class NoteCarouselView: NSView {
         container.frame.origin.x = -offset
     }
 
-    // MARK: - Scroll interception (called from window-level monitor)
+    // MARK: - Scroll interception
 
-    /// Returns nil to consume the event, or the event to pass it through.
     func interceptScroll(_ event: NSEvent) -> NSEvent? {
         let dx = event.scrollingDeltaX
         let dy = event.scrollingDeltaY
 
-        // ── Gesture start ────────────────────────────────────────────────
         if event.phase == .began {
-            gestureAxis = .none
-            dragStart   = displayOffset
-            dragPage    = currentPage
-            elasticOver = 0
+            gestureAxis  = .none
+            dragStart    = displayOffset
+            dragPage     = currentPage
+            rawOverscroll = 0
+            isOverThreshold = false
             recentDeltas.removeAll()
             stopAnim()
             ghostView.alphaValue = 0
         }
 
-        // ── Axis lock ────────────────────────────────────────────────────
         if gestureAxis == .none {
             let adx = abs(dx), ady = abs(dy)
             if adx > 2 || ady > 2 {
@@ -224,7 +420,6 @@ final class NoteCarouselView: NSView {
         let isGesture  = !event.phase.isEmpty
         let isMomentum = !event.momentumPhase.isEmpty
 
-        // ── Vertical: pass straight through to the scroll view ───────────
         if gestureAxis == .vertical {
             if isGesture && (event.phase == .ended || event.phase == .cancelled) {
                 gestureAxis = .none
@@ -232,28 +427,23 @@ final class NoteCarouselView: NSView {
             return event
         }
 
-        // Pass through if we haven't determined the axis yet and have no movement
         if gestureAxis == .none && !isGesture && !isMomentum { return event }
 
-        // ── Track for velocity ───────────────────────────────────────────
         if isGesture && event.phase == .changed {
             recentDeltas.append((CACurrentMediaTime(), dx))
             if recentDeltas.count > 8 { recentDeltas.removeFirst() }
         }
 
-        // ── Apply finger movement ────────────────────────────────────────
         if isGesture && event.phase == .changed {
             applyDelta(dx)
         }
-        // Discard momentum — we animate ourselves
 
-        // ── Gesture end: settle ──────────────────────────────────────────
         if isGesture && (event.phase == .ended || event.phase == .cancelled) {
             gestureAxis = .none
             settle()
         }
 
-        return nil  // consume horizontal events
+        return nil
     }
 
     // MARK: - Drag physics
@@ -263,46 +453,76 @@ final class NoteCarouselView: NSView {
         let w = bounds.width
         let lastPage = max(0, scrollViews.count - 1)
 
-        // One page at a time: hard-clamp the drag range to ±1 from gesture-start page
         let softMin = CGFloat(max(0,        dragPage - 1)) * w
         let softMax = CGFloat(min(lastPage, dragPage + 1)) * w
 
-        let proposed = displayOffset - dx  // deltaX > 0 = go left = prev note
+        // Raw proposed offset — used for normal paging and to detect overscroll entry
+        let proposed = displayOffset - dx
 
         if proposed < softMin {
-            // Left hard stop (or elastic at absolute left edge)
             if dragPage == 0 {
                 setOffset(softMin + rubberBand(proposed - softMin, band: w))
             } else {
                 setOffset(softMin)
             }
-            elasticOver = 0
+            rawOverscroll = 0
+            if ghostView.alphaValue > 0 { ghostView.alphaValue = 0 }
+
+        } else if proposed > softMax && dragPage == lastPage {
+            // Accumulate raw finger movement past the right edge independently
+            // of the rubber-banded displayOffset so the threshold is always reachable.
+            rawOverscroll += -dx   // dx < 0 when swiping left (toward new note)
+            rawOverscroll = max(0, rawOverscroll)
+
+            let threshold = w * 0.40
+            let alpha = min(rawOverscroll / threshold, 1.0)
+            ghostView.alphaValue = alpha
+
+            let nowOver = rawOverscroll > threshold
+            if nowOver != isOverThreshold {
+                isOverThreshold = nowOver
+                updateGhostForThreshold(nowOver)
+            }
+
+            // Visual rubber band is applied to rawOverscroll for the pull effect
+            setOffset(softMax + stiffRubberBand(rawOverscroll, band: w))
 
         } else if proposed > softMax {
-            // Right hard stop or elastic (for new-note overscroll at last page)
-            if dragPage == lastPage {
-                let over = proposed - softMax
-                elasticOver = over
-                let alpha = min(over / (w * 0.30), 1.0)
-                ghostView.alphaValue = alpha
-                setOffset(softMax + rubberBand(over, band: w))
-            } else {
-                setOffset(softMax)
-                elasticOver = 0
-            }
+            setOffset(softMax)
+            rawOverscroll = 0
 
         } else {
             setOffset(proposed)
-            elasticOver = 0
-            ghostView.alphaValue = 0
+            rawOverscroll = 0
+            if ghostView.alphaValue > 0 { ghostView.alphaValue = 0 }
         }
     }
 
+    private func updateGhostForThreshold(_ exceeded: Bool) {
+        let borderColor = exceeded ? NSColor.controlAccentColor.cgColor : NSColor.separatorColor.cgColor
+        CATransaction.begin()
+        CATransaction.setAnimationDuration(0.18)
+        ghostView.layer?.borderColor = borderColor
+        CATransaction.commit()
+
+        ghostLabel.stringValue = exceeded ? "Release to Create" : "+ New Note"
+        ghostLabel.textColor   = exceeded ? .controlAccentColor : .tertiaryLabelColor
+    }
+
+    // Soft band for left-edge bounce
     private func rubberBand(_ x: CGFloat, band: CGFloat) -> CGFloat {
         let abs_x = abs(x)
         let c     = band * 0.55
         let y     = (1.0 - 1.0 / (abs_x / c + 1.0)) * c
         return x < 0 ? -y : y
+    }
+
+    // Stiffer band for new-note pull — provides resistance without a reachability ceiling
+    // issue because rawOverscroll (not the visual offset) is used for the threshold check.
+    private func stiffRubberBand(_ x: CGFloat, band: CGFloat) -> CGFloat {
+        let c = band * 0.38
+        let y = (1.0 - 1.0 / (x / c + 1.0)) * c
+        return y
     }
 
     // MARK: - Settle
@@ -311,34 +531,48 @@ final class NoteCarouselView: NSView {
         let w = bounds.width
         guard w > 0 else { return }
 
-        ghostView.alphaValue = 0
+        let vel = estimatedVelocity()
 
-        // New note creation via right overscroll
-        if elasticOver > w * 0.30 {
-            elasticOver = 0
+        if ghostView.alphaValue > 0 {
+            NSAnimationContext.runAnimationGroup { ctx in
+                ctx.duration = 0.25
+                ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                self.ghostView.animator().alphaValue = 0
+            }
+        }
+
+        if isOverThreshold {
+            isOverThreshold = false
+            CATransaction.begin()
+            CATransaction.setAnimationDuration(0.18)
+            ghostView.layer?.borderColor = NSColor.separatorColor.cgColor
+            CATransaction.commit()
+            ghostLabel.stringValue = "+ New Note"
+            ghostLabel.textColor   = .tertiaryLabelColor
+        }
+
+        if rawOverscroll > w * 0.40 {
+            rawOverscroll = 0
+            pendingVelocity = vel
             onCreateNote?()
             return
         }
 
-        elasticOver = 0
+        rawOverscroll = 0
 
-        let delta = displayOffset - dragStart  // > 0 = swiped left = next note
-        let vel   = estimatedVelocity()        // > 0 = moving next, < 0 = moving prev
-
+        let delta = displayOffset - dragStart
         let posThreshold: CGFloat = w * 0.20
         let velThreshold: CGFloat = 250
 
         var target = currentPage
 
         if delta < -posThreshold || vel < -velThreshold {
-            // Swiped toward previous
             target = max(0, currentPage - 1)
         } else if delta > posThreshold || vel > velThreshold {
-            // Swiped toward next
             target = min(scrollViews.count - 1, currentPage + 1)
         }
 
-        springJump(to: target, stiffness: 420, damping: 30)
+        springJump(to: target, stiffness: 420, damping: 30, velocity: vel)
     }
 
     private func estimatedVelocity() -> CGFloat {
@@ -347,12 +581,12 @@ final class NoteCarouselView: NSView {
         let totalDx = recent.map(\.dx).reduce(0, +)
         let dt = recent.last!.t - recent.first!.t
         guard dt > 0.001 else { return 0 }
-        return -totalDx / dt   // positive = moving toward next page
+        return -totalDx / dt
     }
 
     // MARK: - Spring animation
 
-    private func springJump(to page: Int, stiffness: CGFloat, damping: CGFloat) {
+    private func springJump(to page: Int, stiffness: CGFloat, damping: CGFloat, velocity: CGFloat = 0) {
         let target = max(0, min(scrollViews.count - 1, page))
 
         if target != currentPage {
@@ -361,17 +595,16 @@ final class NoteCarouselView: NSView {
         }
 
         let targetOffset = CGFloat(target) * bounds.width
-        startSpring(to: targetOffset, stiffness: stiffness, damping: damping)
+        startSpring(to: targetOffset, stiffness: stiffness, damping: damping, initialVelocity: velocity)
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
-            self?.focusCurrent()
-        }
+        // Focus immediately — makeFirstResponder works regardless of animation state
+        focusCurrent()
     }
 
-    private func startSpring(to targetOff: CGFloat, stiffness: CGFloat, damping: CGFloat) {
+    private func startSpring(to targetOff: CGFloat, stiffness: CGFloat, damping: CGFloat, initialVelocity: CGFloat = 0) {
         stopAnim()
         springPos    = displayOffset
-        springVel    = 0
+        springVel    = initialVelocity
         springTarget = targetOff
 
         let k = stiffness, b = damping, m = CGFloat(1.0)
