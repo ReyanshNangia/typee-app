@@ -56,7 +56,10 @@ hdiutil create -srcfolder "$STAGE" -volname "$VOL" -fs HFS+ \
 hdiutil attach "$RW" -mountpoint "$MNT" -nobrowse -noautoopen >/dev/null
 
 echo "→ Applying Finder layout…"
-osascript <<APPLESCRIPT 2>/dev/null || echo "  ⚠ Finder styling skipped (DMG still valid)."
+# Finder/AppleScript automation is occasionally flaky (Finder busy, timing), so
+# retry until the layout actually lands — confirmed by a written .DS_Store.
+STYLE_SCRIPT="$(mktemp).applescript"
+cat > "$STYLE_SCRIPT" <<APPLESCRIPT
 tell application "Finder"
     tell disk "${VOL}"
         open
@@ -76,6 +79,17 @@ tell application "Finder"
     end tell
 end tell
 APPLESCRIPT
+
+styled=0
+for attempt in 1 2 3; do
+    osascript "$STYLE_SCRIPT" >/dev/null 2>&1 || true
+    sync; sleep 1
+    if [ -f "$MNT/.DS_Store" ]; then styled=1; break; fi
+    echo "  • styling retry ${attempt}…"
+    sleep 1
+done
+rm -f "$STYLE_SCRIPT"
+[ "$styled" = "1" ] || echo "  ⚠ Finder styling skipped (DMG still valid, but unstyled)."
 
 # Give the volume a custom icon — written last so the Finder styling pass
 # (which rewrites volume metadata) can't drop it. srcfolder also strips
