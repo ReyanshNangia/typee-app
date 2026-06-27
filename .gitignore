@@ -1,0 +1,20 @@
+# Build artifacts
+.build/
+*.o
+*.d
+
+# Generated app bundle & icon
+Typee.app/
+Typee.icns
+Typee.iconset/
+
+# Distribution output
+dist/
+*.dmg
+
+# Generated DMG background (re-rendered by make-dmg.sh on demand)
+Scripts/dmg-background*.png
+
+# macOS / editor cruft
+.DS_Store
+.claude/

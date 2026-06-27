@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="64" height="64" role="img" aria-label="Typee">
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="#FAF7E8" stroke="#E4DBC2" stroke-width="3"/>
+  <g fill="#8C6647">
+    <rect x="56" y="70" width="144" height="34" rx="6"/>
+    <rect x="111" y="70" width="34" height="122" rx="6"/>
+    <rect x="90" y="180" width="76" height="14" rx="6"/>
+  </g>
+</svg>

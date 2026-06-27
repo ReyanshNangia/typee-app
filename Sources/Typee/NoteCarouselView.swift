@@ -6,7 +6,7 @@ final class NoteCarouselView: NSView {
 
     private let noteStore: NoteStore
     private var scrollViews: [NSScrollView] = []
-    private var textViews: [NSTextView] = []
+    private var textViews: [TypeeTextView] = []
 
     private var container: NSView!
     private var ghostView: NSView!
@@ -37,6 +37,15 @@ final class NoteCarouselView: NSView {
     private var springTarget: CGFloat = 0
     private var animTimer: Timer?
 
+    // Prevents re-entrant textDidChange when we apply list prefix styling
+    private var applyingListStyle = false
+
+    private(set) var defaultFontSize: CGFloat = {
+        let v = UserDefaults.standard.double(forKey: "typee.fontSize")
+        return v > 0 ? CGFloat(v) : 15
+    }()
+    var onStatsChanged: ((Int, Int) -> Void)?  // words, chars
+
     // MARK: - Init
 
     init(noteStore: NoteStore) {
@@ -58,6 +67,32 @@ final class NoteCarouselView: NSView {
     }
 
     required init?(coder: NSCoder) { fatalError() }
+
+    // MARK: - Full reload (after folder switch / import)
+
+    func reload() {
+        stopAnim()
+
+        scrollViews.forEach { $0.removeFromSuperview() }
+        textViews.forEach   { _ in }
+        scrollViews.removeAll()
+        textViews.removeAll()
+
+        displayOffset  = 0
+        springPos      = 0
+        springVel      = 0
+        springTarget   = 0
+        gestureAxis    = .none
+        rawOverscroll  = 0
+        isOverThreshold = false
+
+        ghostView.alphaValue = 0
+
+        for note in noteStore.notes { addPage(note: note) }
+        currentPage = max(0, min(noteStore.activeIndex, max(0, noteStore.notes.count - 1)))
+
+        needsLayout = true
+    }
 
     // MARK: - Page management
 
@@ -217,6 +252,7 @@ final class NoteCarouselView: NSView {
         sv.autohidesScrollers   = true
         sv.drawsBackground      = false
         sv.borderType           = .noBorder
+        sv.verticalScroller     = TintedScroller()
 
         let tv = makeTextView()
 
@@ -227,15 +263,14 @@ final class NoteCarouselView: NSView {
             tv.string = note.content
         }
         tv.delegate = self
-
         sv.documentView = tv
         scrollViews.append(sv)
         textViews.append(tv)
         container.addSubview(sv)
     }
 
-    private func makeTextView() -> NSTextView {
-        let tv = NSTextView()
+    private func makeTextView() -> TypeeTextView {
+        let tv = TypeeTextView()
         tv.isRichText           = true
         tv.allowsUndo           = true
         tv.usesFontPanel        = false
@@ -247,10 +282,10 @@ final class NoteCarouselView: NSView {
         tv.minSize   = NSSize(width: 0, height: bounds.height)
         tv.maxSize   = NSSize(width: CGFloat.greatestFiniteMagnitude,
                               height: CGFloat.greatestFiniteMagnitude)
-        tv.font      = .systemFont(ofSize: 15)
+        tv.font      = .systemFont(ofSize: defaultFontSize)
         tv.textColor = .labelColor
         tv.typingAttributes = [
-            .font: NSFont.systemFont(ofSize: 15),
+            .font: NSFont.systemFont(ofSize: defaultFontSize),
             .foregroundColor: NSColor.labelColor,
         ]
         tv.drawsBackground  = false
@@ -259,6 +294,7 @@ final class NoteCarouselView: NSView {
         tv.isAutomaticSpellingCorrectionEnabled  = false
         tv.isGrammarCheckingEnabled              = false
         tv.textContainerInset = NSSize(width: 24, height: 20)
+        tv.placeholderText = "Type to start a note…"
         return tv
     }
 
@@ -641,12 +677,356 @@ final class NoteCarouselView: NSView {
 // MARK: - NSTextViewDelegate
 
 extension NoteCarouselView: NSTextViewDelegate {
+
     func textDidChange(_ notification: Notification) {
-        guard let tv    = notification.object as? NSTextView,
+        guard let tv    = notification.object as? TypeeTextView,
               let idx   = textViews.firstIndex(of: tv),
               let store = tv.textStorage else { return }
-        let range   = NSRange(location: 0, length: store.length)
-        let rtf     = store.rtf(from: range, documentAttributes: [:])
+        let range = NSRange(location: 0, length: store.length)
+        let rtf   = store.rtf(from: range, documentAttributes: [:])
         noteStore.updateNote(at: idx, content: tv.string, rtfData: rtf)
+        tv.needsDisplay = true  // refresh placeholder visibility
+        if !applyingListStyle { styleNewlyTypedPrefix(in: tv) }
+        let text = tv.string
+        let wc = text.split { $0.isWhitespace || $0.isNewline }.filter { !$0.isEmpty }.count
+        onStatsChanged?(wc, text.count)
+    }
+
+    func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        switch commandSelector {
+        case #selector(NSResponder.insertNewline(_:)):   return handleReturn(in: textView)
+        case #selector(NSResponder.insertTab(_:)):       return handleTab(in: textView, indent: true)
+        case #selector(NSResponder.insertBacktab(_:)):   return handleTab(in: textView, indent: false)
+        default: return false
+        }
+    }
+
+    // MARK: - Return key
+
+    private func handleReturn(in tv: NSTextView) -> Bool {
+        guard let storage = tv.textStorage else { return false }
+        let sel = tv.selectedRange()
+        guard sel.length == 0 else { return false }
+
+        let str       = storage.string as NSString
+        let lineRange = str.lineRange(for: NSRange(location: sel.location, length: 0))
+        let lineText  = str.substring(with: lineRange)
+
+        // Structured list: digits → 1. 2. 3. | letters → a. b. c. | roman → i. ii. iii.
+        let structPattern = #"^[ \t]*(\d{1,4}|[a-z]{1,8})\. "#
+        if let m = lineText.range(of: structPattern, options: .regularExpression) {
+            let full      = String(lineText[m])
+            let spaces    = String(full.prefix(while: { $0 == " " || $0 == "\t" }))
+            let marker    = String(full.drop(while: { $0 == " " || $0 == "\t" })
+                                       .prefix(while: { $0 != "." }))
+            let prefixLen = (full as NSString).length
+            let contentLen = sel.location - (lineRange.location + prefixLen)
+            guard contentLen >= 0 else { return false }
+
+            if contentLen == 0 {
+                exitListMode(lineRange: lineRange, prefixLen: prefixLen, in: tv, storage: storage)
+            } else {
+                let next = nextMarker(marker, spacesCount: spaces.count)
+                tv.insertText("\n\(spaces)\(next). " as NSString, replacementRange: sel)
+            }
+            return true
+        }
+
+        // Bullet list: - * •
+        if let m = lineText.range(of: #"^[ \t]*[-*•] "#, options: .regularExpression) {
+            let full      = String(lineText[m])
+            let spaces    = String(full.prefix(while: { $0 == " " || $0 == "\t" }))
+            let bullet    = String(full.drop(while: { $0 == " " || $0 == "\t" }).prefix(1))
+            let prefixLen = (full as NSString).length
+            let contentLen = sel.location - (lineRange.location + prefixLen)
+            guard contentLen >= 0 else { return false }
+
+            if contentLen == 0 {
+                exitListMode(lineRange: lineRange, prefixLen: prefixLen, in: tv, storage: storage)
+            } else {
+                tv.insertText("\n\(spaces)\(bullet) " as NSString, replacementRange: sel)
+            }
+            return true
+        }
+
+        return false
+    }
+
+    // MARK: - Tab / Shift-Tab
+
+    private func handleTab(in tv: NSTextView, indent: Bool) -> Bool {
+        guard let storage = tv.textStorage else { return false }
+        let sel = tv.selectedRange()
+        guard sel.length == 0 else { return false }
+
+        let str       = storage.string as NSString
+        let lineRange = str.lineRange(for: NSRange(location: sel.location, length: 0))
+        let lineText  = str.substring(with: lineRange)
+
+        // Structured list
+        if let m = lineText.range(of: #"^[ \t]*(\d{1,4}|[a-z]{1,8})\. "#,
+                                   options: .regularExpression) {
+            let old          = String(lineText[m])
+            let spacesCount  = old.prefix(while: { $0 == " " || $0 == "\t" }).count
+            let currentLevel = spacesCount / 3
+            let newLevel     = indent ? currentLevel + 1 : currentLevel - 1
+            guard newLevel >= 0 else { return true }
+            let newSpaces    = String(repeating: " ", count: newLevel * 3)
+            let new          = newSpaces + startMarker(level: newLevel) + ". "
+            replacePrefix(old, with: new, lineRange: lineRange, originalSel: sel,
+                          in: tv, storage: storage)
+            return true
+        }
+
+        // Bullet list
+        if let m = lineText.range(of: #"^[ \t]*[-*•] "#, options: .regularExpression) {
+            let old    = String(lineText[m])
+            let spaces = String(old.prefix(while: { $0 == " " || $0 == "\t" }))
+            let bullet = String(old.drop(while: { $0 == " " || $0 == "\t" }).prefix(1))
+            let unit   = "   "
+            if indent {
+                replacePrefix(old, with: spaces + unit + bullet + " ",
+                              lineRange: lineRange, originalSel: sel, in: tv, storage: storage)
+            } else {
+                guard spaces.count >= unit.count else { return true }
+                replacePrefix(old, with: String(spaces.dropFirst(unit.count)) + bullet + " ",
+                              lineRange: lineRange, originalSel: sel, in: tv, storage: storage)
+            }
+            return true
+        }
+
+        return false
+    }
+
+    // MARK: - Shared helpers
+
+    private func exitListMode(lineRange: NSRange, prefixLen: Int,
+                               in tv: NSTextView, storage: NSTextStorage) {
+        let remove = NSRange(location: lineRange.location, length: prefixLen)
+        if tv.shouldChangeText(in: remove, replacementString: "") {
+            storage.replaceCharacters(in: remove, with: "")
+            tv.didChangeText()
+            tv.setSelectedRange(NSRange(location: lineRange.location, length: 0))
+        }
+    }
+
+    private func replacePrefix(_ old: String, with new: String,
+                                lineRange: NSRange, originalSel: NSRange,
+                                in tv: NSTextView, storage: NSTextStorage) {
+        let oldLen    = (old as NSString).length
+        let newLen    = (new as NSString).length
+        let replRange = NSRange(location: lineRange.location, length: oldLen)
+
+        let spacesCount = new.prefix(while: { $0 == " " || $0 == "\t" }).count
+        let attr = NSMutableAttributedString(string: new, attributes: listBodyAttrs())
+        if spacesCount < newLen {
+            attr.addAttributes(listPrefixAttrs(),
+                                range: NSRange(location: spacesCount, length: newLen - spacesCount))
+        }
+
+        applyingListStyle = true
+        tv.insertText(attr, replacementRange: replRange)
+        applyingListStyle = false
+        tv.typingAttributes = listBodyAttrs()
+        tv.insertionPointColor = .controlAccentColor
+
+        let delta  = newLen - oldLen
+        let offset = originalSel.location - lineRange.location
+        let newPos = offset <= oldLen ? lineRange.location + newLen : originalSel.location + delta
+        tv.setSelectedRange(NSRange(location: newPos, length: 0))
+    }
+
+    private func styleNewlyTypedPrefix(in tv: NSTextView) {
+        guard let storage = tv.textStorage else { return }
+        let sel = tv.selectedRange()
+        guard sel.length == 0, sel.location > 0 else { return }
+        let str = storage.string as NSString
+        guard sel.location <= str.length,
+              str.character(at: sel.location - 1) == 32 else { return }  // space
+
+        let lineRange  = str.lineRange(for: NSRange(location: sel.location, length: 0))
+        let upToCursor = str.substring(with: NSRange(location: lineRange.location,
+                                                      length: sel.location - lineRange.location))
+
+        // Match: spaces + (digit/letter/roman + dot | bullet) + one space, end of string
+        guard upToCursor.range(of: #"^[ \t]*(\d{1,4}\.|[a-z]{1,8}\.|[-*•]) $"#,
+                                options: .regularExpression) != nil else { return }
+
+        let spacesCount = upToCursor.prefix(while: { $0 == " " || $0 == "\t" }).count
+        let markerStart = lineRange.location + spacesCount
+        let markerLen   = sel.location - lineRange.location - spacesCount
+        guard markerLen > 0 else { return }
+
+        applyingListStyle = true
+        storage.beginEditing()
+        for (k, v) in listPrefixAttrs() {
+            storage.addAttribute(k, value: v,
+                                 range: NSRange(location: markerStart, length: markerLen))
+        }
+        storage.endEditing()
+        applyingListStyle = false
+        tv.typingAttributes = listBodyAttrs()
+        tv.insertionPointColor = .controlAccentColor
+    }
+
+    // MARK: - List level helpers
+
+    /// Converts integer to lowercase Roman numeral (i, ii, iii, iv…)
+    private func toRoman(_ n: Int) -> String {
+        guard n > 0 else { return "i" }
+        let vals = [1000,900,500,400,100,90,50,40,10,9,5,4,1]
+        let syms = ["m","cm","d","cd","c","xc","l","xl","x","ix","v","iv","i"]
+        var n = n, result = ""
+        for (v, s) in zip(vals, syms) { while n >= v { result += s; n -= v } }
+        return result
+    }
+
+    private func fromRoman(_ s: String) -> Int {
+        let map: [Character: Int] = ["i":1,"v":5,"x":10,"l":50,"c":100,"d":500,"m":1000]
+        var total = 0, prev = 0
+        for ch in s.reversed() {
+            let v = map[ch] ?? 0; total += v < prev ? -v : v; prev = v
+        }
+        return max(total, 1)
+    }
+
+    /// Returns the next marker string by detecting the current marker's type from its content.
+    private func nextMarker(_ marker: String, spacesCount: Int) -> String {
+        if let n = Int(marker) {
+            // Pure digits → numeric list
+            return "\(n + 1)"
+        }
+        let romanChars = CharacterSet(charactersIn: "ivxlcdm")
+        if marker.unicodeScalars.allSatisfy({ romanChars.contains($0) }) && fromRoman(marker) > 0 {
+            // All roman-numeral characters → roman list
+            return toRoman(fromRoman(marker) + 1)
+        }
+        // Single lowercase letter → alphabetic list
+        guard let sv = marker.unicodeScalars.first, sv.value >= 97, sv.value <= 122 else { return "a" }
+        return sv.value < 122 ? String(UnicodeScalar(sv.value + 1)!) : "z"
+    }
+
+    /// Starting marker character when entering a new indent level.
+    private func startMarker(level: Int) -> String {
+        switch level % 3 {
+        case 0:  return "1"
+        case 1:  return "a"
+        default: return "i"
+        }
+    }
+
+    // MARK: - Font size
+
+    func setDefaultFontSize(_ size: CGFloat) {
+        let clamped = max(10, min(30, size))
+        defaultFontSize = clamped
+        UserDefaults.standard.set(Double(clamped), forKey: "typee.fontSize")
+        for tv in textViews {
+            tv.typingAttributes[.font] = NSFont.systemFont(ofSize: clamped)
+        }
+    }
+
+    func adjustSelectionFontSize(by delta: CGFloat) {
+        guard let tv = currentTextView as? TypeeTextView,
+              let storage = tv.textStorage else { return }
+        let sel = tv.selectedRange()
+        if sel.length == 0 {
+            let cur = (tv.typingAttributes[.font] as? NSFont)?.pointSize ?? defaultFontSize
+            let sz = max(10, min(30, cur + delta))
+            tv.typingAttributes[.font] = NSFont.systemFont(ofSize: sz)
+            return
+        }
+        tv.shouldChangeText(in: sel, replacementString: nil)
+        storage.beginEditing()
+        storage.enumerateAttribute(.font, in: sel, options: []) { val, range, _ in
+            let existing = val as? NSFont ?? NSFont.systemFont(ofSize: self.defaultFontSize)
+            let sz = max(10, min(30, existing.pointSize + delta))
+            let newFont = NSFont(descriptor: existing.fontDescriptor, size: sz)
+                       ?? NSFont.systemFont(ofSize: sz)
+            storage.addAttribute(.font, value: newFont, range: range)
+        }
+        storage.endEditing()
+        tv.didChangeText()
+    }
+
+    func updateStatsForCurrentPage() {
+        guard currentPage < textViews.count else { onStatsChanged?(0, 0); return }
+        let text = textViews[currentPage].string
+        let wc = text.split { $0.isWhitespace || $0.isNewline }.filter { !$0.isEmpty }.count
+        onStatsChanged?(wc, text.count)
+    }
+
+    // MARK: - Scroller tint
+
+    /// Call whenever the note color changes so the scrollbar knob matches the theme.
+    func setScrollerTint(_ color: NSColor?) {
+        let knob: NSColor
+        if let c = color {
+            // Derive a visible knob: same hue, lower alpha, slightly darkened.
+            knob = c.withAlphaComponent(0.55).blended(withFraction: 0.15,
+                                                       of: .black) ?? c.withAlphaComponent(0.55)
+        } else {
+            knob = NSColor.labelColor.withAlphaComponent(0.25)
+        }
+        for sv in scrollViews {
+            (sv.verticalScroller as? TintedScroller)?.knobColor = knob
+            sv.verticalScroller?.needsDisplay = true
+        }
+    }
+
+    // MARK: - Attribute factories
+
+    private var listStyleColor: NSColor {
+        NSColor(red: 0.38, green: 0.36, blue: 0.40, alpha: 1.0)  // warm dark slate
+    }
+
+    private func listPrefixAttrs() -> [NSAttributedString.Key: Any] {
+        [.foregroundColor: listStyleColor,
+         .font: NSFont.systemFont(ofSize: 15, weight: .semibold)]
+    }
+
+    private func listBodyAttrs() -> [NSAttributedString.Key: Any] {
+        [.foregroundColor: NSColor.labelColor,
+         .font: NSFont.systemFont(ofSize: 15)]
+    }
+}
+
+// MARK: - Tinted scroller
+
+final class TintedScroller: NSScroller {
+    var knobColor: NSColor = NSColor.labelColor.withAlphaComponent(0.25)
+
+    override class var isCompatibleWithOverlayScrollers: Bool { true }
+
+    override func drawKnob() {
+        let rect = rect(for: .knob)
+        guard rect != .zero else { return }
+
+        let radius = rect.width / 2
+        let path = NSBezierPath(roundedRect: rect.insetBy(dx: 1.5, dy: 1.5),
+                                xRadius: radius, yRadius: radius)
+        knobColor.setFill()
+        path.fill()
+    }
+}
+
+// MARK: - Placeholder-capable text view
+
+final class TypeeTextView: NSTextView {
+    var placeholderText: String = ""
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        guard string.isEmpty, !placeholderText.isEmpty else { return }
+        let padding = textContainer?.lineFragmentPadding ?? 5
+        let inset   = textContainerInset
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 15),
+            .foregroundColor: NSColor.placeholderTextColor,
+        ]
+        placeholderText.draw(
+            at: NSPoint(x: inset.width + padding, y: inset.height),
+            withAttributes: attrs
+        )
     }
 }

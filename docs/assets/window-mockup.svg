@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 520" width="720" height="520" role="img" aria-label="The Typee window">
+  <defs>
+    <linearGradient id="win" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FDFBF4"/>
+      <stop offset="1" stop-color="#F6F0DF"/>
+    </linearGradient>
+    <filter id="winshadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="26" flood-color="#5C4632" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+
+  <rect x="60" y="34" width="600" height="452" rx="22" fill="url(#win)" stroke="#E7DEC6" stroke-width="1.5" filter="url(#winshadow)"/>
+
+  <!-- traffic lights -->
+  <circle cx="92" cy="66" r="7" fill="#FF5F57"/>
+  <circle cx="116" cy="66" r="7" fill="#FEBC2E"/>
+  <circle cx="140" cy="66" r="7" fill="#28C840"/>
+
+  <!-- note content -->
+  <text x="96" y="128" font-family="Georgia, serif" font-size="27" font-weight="bold" fill="#5C4632">Welcome to Typee</text>
+  <text x="96" y="162" font-family="-apple-system, 'Segoe UI', Helvetica, sans-serif" font-size="15" fill="#9C8B72">A fast, floating notepad that lives in your menu bar.</text>
+
+  <text x="96" y="212" font-family="-apple-system, 'Segoe UI', Helvetica, sans-serif" font-size="15.5" font-weight="600" fill="#6B5640">Getting started</text>
+  <g font-family="-apple-system, 'Segoe UI', Helvetica, sans-serif" font-size="15.5" fill="#4A3D2E">
+    <text x="96" y="242">Double-tap <tspan font-weight="700">⌃</tspan> to show and hide this window.</text>
+    <text x="96" y="270"><tspan font-weight="700">⌘N</tspan> new note   <tspan font-weight="700">⌘W</tspan> hide   <tspan font-weight="700">⌘[</tspan> / <tspan font-weight="700">⌘]</tspan> switch</text>
+  </g>
+
+  <text x="96" y="318" font-family="-apple-system, 'Segoe UI', Helvetica, sans-serif" font-size="15.5" font-weight="600" fill="#6B5640">Formatting</text>
+  <g font-family="-apple-system, 'Segoe UI', Helvetica, sans-serif" font-size="15.5" fill="#4A3D2E">
+    <text x="96" y="348"><tspan font-weight="700">⌘B</tspan> bold   <tspan font-weight="700">⌘U</tspan> underline   <tspan font-weight="700">⌘=</tspan>/<tspan font-weight="700">⌘−</tspan> size</text>
+    <text x="96" y="376">Type <tspan font-weight="700">1.</tspan> or <tspan font-weight="700">a.</tspan> then Space to start a list.</text>
+  </g>
+
+  <!-- bottom indicator bar -->
+  <line x1="60" y1="446" x2="660" y2="446" stroke="#EBE3CD" stroke-width="1.5"/>
+  <text x="96" y="470" font-family="-apple-system, 'Segoe UI', Helvetica, sans-serif" font-size="12.5" fill="#B3A488">142w · 820c</text>
+  <!-- page dots -->
+  <circle cx="346" cy="466" r="4" fill="#8C6647" opacity="0.85"/>
+  <circle cx="362" cy="466" r="4" fill="#8C6647" opacity="0.25"/>
+  <circle cx="378" cy="466" r="4" fill="#8C6647" opacity="0.25"/>
+  <!-- palette glyph -->
+  <g transform="translate(612,460)" opacity="0.7">
+    <path d="M10 0 a10 10 0 1 0 0.1 0 c4 0 5 2 5 4 c0 3 -3 3 -3 5 c0 1.5 1.5 2 3 2 a8 8 0 0 0 -5 -11 z" fill="#9C8B72"/>
+    <circle cx="6" cy="7" r="1.6" fill="#FDFBF4"/>
+    <circle cx="11" cy="4.5" r="1.6" fill="#FDFBF4"/>
+  </g>
+</svg>
